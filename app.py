@@ -8,30 +8,31 @@ from audio_recorder_streamlit import audio_recorder
 st.set_page_config(page_title="통역 MVP", page_icon="🗣️", layout="centered")
 st.markdown("""
 <style>
-/* 공통: 버튼/컴포넌트가 왼쪽으로 끌리는 현상 방지 */
+/* 제목 여백 조정 */
+h3 { margin-top: 0.6rem; }
+
+/* 공통 중앙 정렬 유틸 */
 .center-row { display:flex; justify-content:center; align-items:center; }
 
-/* 🔁 스왑 버튼: 가운데 + 둥근 아이콘 버튼 */
+/* 🔁 스왑 아이콘 버튼(정중앙) */
 .center-row .swap-btn > button {
-  width: 52px; height: 52px;
-  border-radius: 50%;
-  font-size: 22px;
-  padding: 0;
+  width:52px; height:52px;
+  border-radius:50%;
+  font-size:22px;
+  padding:0;
 }
 
-/* 🎤 마이크: 래퍼(div)에 테두리 주고, 내용(iframe)을 중앙에 */
-.mic-wrap {
-  display: inline-block;             /* 내용 크기만큼만 래퍼가 줄어듦 → 테두리가 딱 맞음 */
-  padding: 6px;                      /* 아이콘보다 살짝 크게 보이게 */
-  border: 2px solid #4a4a4a;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.05);
+/* 🎤 마이크: 래퍼를 기준으로 정확히 중앙 + 아이콘보다 살짝 큰 테두리 */
+#mic-center { display:flex; justify-content:center; }
+#mic-box {
+  display:inline-block;               /* 내용 크기만큼만 테두리 */
+  padding:6px;                        /* 아이콘보다 살짝 크게 보이게 (5~8로 조절 가능) */
+  border:2px solid #4a4a4a;
+  border-radius:12px;
+  background:rgba(255,255,255,0.05);
 }
-
-/* iframe을 래퍼 안에서 중앙 정렬 */
-.mic-wrap iframe {
-  display:block;
-  margin: 0 auto;
+#mic-box > iframe {                   /* iframe(마이크)을 래퍼 내부 중앙에 */
+  display:block; margin:0 auto;
 }
 
 /* 마이크 캡션 */
@@ -45,7 +46,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 st.markdown("<h3 style='text-align:center;'>🗣️ 통역 MVP</h3>", unsafe_allow_html=True)
 
-# ----------- 강제로 기본 자격증명 비활성(환경변수 제거) ------------
+# ----------- 환경변수 방식 비활성(혼선 방지) ------------
 os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
 
 # -------------- secrets 검증 & 공용 로더 ----------------
@@ -54,19 +55,10 @@ def _load_sa_info():
         info = dict(st.secrets["gcp_service_account"])
         required = ["type","project_id","private_key","client_email","token_uri"]
         if not all(k in info and info[k] for k in required):
-            raise ValueError("secrets에 필요한 필드가 없습니다.")
+            raise ValueError("secrets 누락")
         return info
-    except Exception as e:
+    except Exception:
         st.error("❌ `.streamlit/secrets.toml`의 [gcp_service_account] 설정을 확인하세요.")
-        st.code("""예시:
-[gcp_service_account]
-type = "service_account"
-project_id = "your-project-id"
-private_key_id = "..."
-private_key = "-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n"
-client_email = "svc@your-project-id.iam.gserviceaccount.com"
-token_uri = "https://oauth2.googleapis.com/token"
-""")
         st.stop()
 
 SA_INFO = _load_sa_info()
@@ -133,21 +125,26 @@ TTS_BCP  = {"한국어":"ko-KR","영어":"en-US","프랑스어":"fr-FR","이탈�
 if "src_name" not in st.session_state: st.session_state.src_name = "한국어"
 if "tgt_name" not in st.session_state: st.session_state.tgt_name = "영어"
 
-# -------------- 언어 선택 + 스왑(아이콘 중앙) --------------
-st.selectbox("입력 언어", LANGS, key="src_name")
+# -------------- 언어 선택 + 스왑(정중앙) --------------
 def _swap():
     st.session_state.src_name, st.session_state.tgt_name = st.session_state.tgt_name, st.session_state.src_name
+
+st.selectbox("입력 언어", LANGS, key="src_name")
+st.markdown('<div class="center-row"><div class="swap-btn">', unsafe_allow_html=True)
 st.button("🔁", key="swap_btn", on_click=_swap)
+st.markdown('</div></div>', unsafe_allow_html=True)
 st.selectbox("목표 언어", LANGS, key="tgt_name")
 
 say_out_loud = st.toggle("번역 음성 출력", value=False)
 
 st.divider()
 
-# -------------- 마이크(정중앙) + 캡션 간격 축소 --------------
+# -------------- 마이크(정중앙 + 테두리) --------------
+st.markdown('<div id="mic-center"><div id="mic-box">', unsafe_allow_html=True)
 audio_bytes = audio_recorder(text="", recording_color="#ff4b4b",
                              neutral_color="#2b2b2b", icon_size="2x")
-st.markdown("<div class='rec-caption'>눌러서 녹음 / 다시 눌러서 정지</div>", unsafe_allow_html=True)
+st.markdown('</div></div>', unsafe_allow_html=True)
+st.markdown('<div class="rec-caption">눌러서 녹음 / 다시 눌러서 정지</div>', unsafe_allow_html=True)
 
 # -------------- 실행 --------------
 fallbacks = {
@@ -166,8 +163,10 @@ if st.button("변환 실행", type="primary", use_container_width=True):
         try:
             src_text = stt_recognize(audio_bytes, src_lang, alt_codes)
             st.text_area("원문", src_text, height=120)
+
             tr_text = translate_text(src_text, tgt_iso) if src_text else ""
             st.text_area("번역", tr_text, height=140)
+
             if say_out_loud and tr_text:
                 try:
                     mp3 = tts_synthesize(tr_text, tgt_tts)
