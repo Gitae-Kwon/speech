@@ -8,27 +8,39 @@ from audio_recorder_streamlit import audio_recorder
 st.set_page_config(page_title="통역 MVP", page_icon="🗣️", layout="centered")
 st.markdown("""
 <style>
-/* 🎤 버튼 */
-.mic-btn {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  width: 88px;
-  height: 88px;
-  font-size: 2rem;
-  cursor: pointer;
-  border: 2px solid #4a4a4a;
-  border-radius: 12px;
-  background: rgba(255,255,255,0.05);
-  margin: 0 auto; /* 중앙 정렬 */
+/* 제목 여백 */
+h3 { margin-top: .6rem; }
+
+/* 공통 중앙 정렬 유틸 */
+.center-row { display:flex; justify-content:center; align-items:center; }
+
+/* 🔁 스왑 아이콘 버튼(정중앙) */
+.center-row .swap-btn > button{
+  width:52px;height:52px;border-radius:50%;font-size:22px;padding:0;
 }
 
-.mic-caption {
-  margin-top: -6px;
-  text-align: center;
-  font-size: 0.85rem;
-  color: #999;
+/* 🎤 마이크: 보이는 건 이모지, 실제 클릭/녹음은 아래에 겹친 iframe이 처리 */
+#mic-emoji-box{
+  position:relative;
+  width:88px;height:88px;           /* 필요시 84~96px로 미세조정 */
+  margin:0 auto;
+  border:2px solid #4a4a4a;border-radius:12px;
+  background:rgba(255,255,255,0.05);
+  display:flex;align-items:center;justify-content:center;
 }
+#mic-emoji-box::after{              /* 실제로 보이는 아이콘 */
+  content:"🎤";
+  font-size:2rem;
+  line-height:1;
+}
+#mic-emoji-box iframe{              /* 실제 마이크 컴포넌트 */
+  position:absolute; inset:0;
+  opacity:0;                        /* 보이지 않게 */
+  pointer-events:auto;              /* 클릭/터치 이벤트는 그대로 통과 */
+}
+
+/* 캡션 */
+.rec-caption{ margin-top:-6px;text-align:center;font-size:.85rem;color:#999; }
 </style>
 """, unsafe_allow_html=True)
 st.markdown("<h3 style='text-align:center;'>🗣️ 통역 MVP</h3>", unsafe_allow_html=True)
@@ -81,7 +93,7 @@ def stt_recognize(wav_bytes: bytes, lang_code: str, alt_codes=None) -> str:
         alternative_language_codes=alt_codes or [],
         enable_automatic_punctuation=True,
         audio_channel_count=ch,
-        model="latest_short",  # 짧은 발화 최적화
+        model="latest_short",
     )
     audio = speech.RecognitionAudio(content=wav_bytes)
     resp = client.recognize(config=cfg, audio=audio)
@@ -126,11 +138,13 @@ say_out_loud = st.toggle("번역 음성 출력", value=False)
 
 st.divider()
 
-# -------------- 마이크(정중앙 + 테두리) --------------
-st.markdown('<div id="mic-center"><div id="mic-box">', unsafe_allow_html=True)
+# -------------- 🎤 이모지 마이크(오버레이) --------------
+# 1) 이모지와 테두리를 보이는 박스 만들고
+st.markdown('<div id="mic-emoji-box">', unsafe_allow_html=True)
+# 2) 그 안에 녹음 컴포넌트를 투명하게 겹쳐서 클릭하면 실제 녹음이 동작
 audio_bytes = audio_recorder(text="", recording_color="#ff4b4b",
                              neutral_color="#2b2b2b", icon_size="2x")
-st.markdown('</div></div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
 st.markdown('<div class="rec-caption">눌러서 녹음 / 다시 눌러서 정지</div>', unsafe_allow_html=True)
 
 # -------------- 실행 --------------
