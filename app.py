@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# 통역 MVP — 입력(음성) → 번역(텍스트) → (옵션) 음성
 import io, wave, os
 import streamlit as st
 from audio_recorder_streamlit import audio_recorder
@@ -8,68 +7,45 @@ from audio_recorder_streamlit import audio_recorder
 st.set_page_config(page_title="통역 MVP", page_icon="🗣️", layout="centered")
 st.markdown("""
 <style>
-div.stButton > button { display:block; margin:0 auto; }
 div.stButton > button#swap_btn { width:52px; height:52px; font-size:22px; border-radius:50%; padding:0; }
 
-/* 마이크 컨테이너 중앙 정렬 + 위아래 간격 추가 */
-.mic-container {
-    display: block !important;
-    margin: 2rem auto !important;
-    text-align: center !important;
-    width: 100% !important;
-    padding: 1.5rem 0 !important;
+/* 변환 실행 버튼 스타일 복사 (마이크 버튼 동일) */
+.stButton > button.primary-btn {
+    background-color: rgb(19, 23, 32);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    width: 100%;
+}
+.stButton > button.primary-btn:hover {
+    background-color: rgb(32, 37, 48);
 }
 
-/* 마이크 아이콘 자체 중앙 정렬 */
-.mic-container iframe[title^="audio_recorder_streamlit"],
-iframe[title^="audio_recorder_streamlit"] { 
-    display: block !important; 
-    margin: 0 auto !important;
-    text-align: center !important;
-    position: relative !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-}
-
-/* 마이크를 포함하는 모든 div 강제 중앙 정렬 */
-.mic-container > div,
-.mic-container > div > div,
-.mic-container > div > div > div,
-div:has(iframe[title^="audio_recorder_streamlit"]) {
-    display: block !important;
-    margin: 0 auto !important;
-    text-align: center !important;
-    width: 100% !important;
-}
-
-/* 전체 페이지 중앙 정렬 보장 */
-.element-container {
-    text-align: center !important;
+/* audio_recorder 숨기기 */
+iframe[title^="audio_recorder_streamlit"] {
+    display:none !important;
 }
 
 .rec-caption { 
-    margin-top: 0.5rem;
-    margin-bottom: 1rem;
-    text-align: center; 
-    font-size: 0.85rem; 
-    color: #666; 
+    margin-top:-8px; 
+    text-align:center; 
+    font-size:0.85rem; 
+    color:#666; 
 }
 
-/* 전체 컨테이너 중앙 정렬 보강 */
 .main .block-container {
     padding-top: 2rem;
     max-width: 600px;
 }
-
-/* divider 위아래 간격 조정 */
-hr {
-    margin: 2rem 0 !important;
-}
 </style>
 """, unsafe_allow_html=True)
+
 st.markdown("<h3 style='text-align:center;'>🗣️ 통역 MVP</h3>", unsafe_allow_html=True)
 
-# ----------- 강제로 기본 자격증명 비활성(환경변수 제거) ------------
+# ----------- 환경변수 제거 ------------
 os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
 
 # -------------- secrets 검증 & 공용 로더 ----------------
@@ -78,19 +54,10 @@ def _load_sa_info():
         info = dict(st.secrets["gcp_service_account"])
         required = ["type","project_id","private_key","client_email","token_uri"]
         if not all(k in info and info[k] for k in required):
-            raise ValueError("secrets에 필요한 필드가 없습니다.")
+            raise ValueError
         return info
-    except Exception as e:
+    except:
         st.error("❌ .streamlit/secrets.toml의 [gcp_service_account] 설정을 확인하세요.")
-        st.code("""예시:
-[gcp_service_account]
-type = "service_account"
-project_id = "your-project-id"
-private_key_id = "..."
-private_key = "-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n"
-client_email = "svc@your-project-id.iam.gserviceaccount.com"
-token_uri = "https://oauth2.googleapis.com/token"
-""")
         st.stop()
 
 SA_INFO = _load_sa_info()
@@ -110,7 +77,7 @@ def gcp_tts():
     from google.cloud import texttospeech
     return texttospeech.TextToSpeechClient.from_service_account_info(SA_INFO)
 
-# -------------- 변환 헬퍼 --------------
+# 변환 헬퍼
 def _wav_info(wav_bytes: bytes):
     with wave.open(io.BytesIO(wav_bytes), "rb") as w:
         return w.getframerate(), w.getnchannels()
@@ -126,7 +93,7 @@ def stt_recognize(wav_bytes: bytes, lang_code: str, alt_codes=None) -> str:
         alternative_language_codes=alt_codes or [],
         enable_automatic_punctuation=True,
         audio_channel_count=ch,
-        model="latest_short",  # 짧은 발화 최적화
+        model="latest_short",
     )
     audio = speech.RecognitionAudio(content=wav_bytes)
     resp = client.recognize(config=cfg, audio=audio)
@@ -147,17 +114,17 @@ def tts_synthesize(text: str, bcp47_lang: str) -> bytes:
     cfg = texttospeech.AudioConfig(audio_encoding=texttospeech.AudioEncoding.MP3)
     return client.synthesize_speech(input=s_input, voice=voice, audio_config=cfg).audio_content
 
-# -------------- 언어/코드 테이블 --------------
+# 언어/코드
 LANGS = ["한국어","영어","프랑스어","이탈리아어","베트남어","일본어","중국어(간체)"]
 STT_BCP = {"한국어":"ko-KR","영어":"en-US","프랑스어":"fr-FR","이탈리아어":"it-IT","베트남어":"vi-VN","일본어":"ja-JP","중국어(간체)":"zh-CN"}
 TRANS_ISO = {"한국어":"ko","영어":"en","프랑스어":"fr","이탈리아어":"it","베트남어":"vi","일본어":"ja","중국어(간체)":"zh"}
 TTS_BCP  = {"한국어":"ko-KR","영어":"en-US","프랑스어":"fr-FR","이탈리아어":"it-IT","베트남어":"vi-VN","일본어":"ja-JP","중국어(간체)":"zh-CN"}
 
-# -------------- 상태 기본값 --------------
+# 상태
 if "src_name" not in st.session_state: st.session_state.src_name = "한국어"
 if "tgt_name" not in st.session_state: st.session_state.tgt_name = "영어"
 
-# -------------- 언어 선택 + 스왑(아이콘 중앙) --------------
+# 언어 선택 + 스왑
 st.selectbox("입력 언어", LANGS, key="src_name")
 def _swap():
     st.session_state.src_name, st.session_state.tgt_name = st.session_state.tgt_name, st.session_state.src_name
@@ -168,16 +135,23 @@ say_out_loud = st.toggle("번역 음성 출력", value=False)
 
 st.divider()
 
-# -------------- 마이크(정중앙) + 캡션 간격 축소 --------------
-# 마이크를 스왑 버튼과 동일한 방식으로 중앙 정렬 - 컨테이너 방식 사용
-st.markdown('<div class="mic-container">', unsafe_allow_html=True)
+# 마이크 버튼 (변환 실행과 동일 스타일)
+if st.button("마이크", key="mic_btn", type="primary", use_container_width=True):
+    # JS로 숨겨진 audio_recorder 클릭
+    st.markdown("""
+        <script>
+        const iframe = parent.document.querySelector('iframe[title^="audio_recorder_streamlit"]');
+        if (iframe) { iframe.contentWindow.document.querySelector('button')?.click(); }
+        </script>
+    """, unsafe_allow_html=True)
+
+# 실제 audio_recorder (숨김 상태)
 audio_bytes = audio_recorder(text="", recording_color="#ff4b4b",
                              neutral_color="#2b2b2b", icon_size="2x")
-st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<div class='rec-caption'>눌러서 녹음 / 다시 눌러서 정지</div>", unsafe_allow_html=True)
 
-# -------------- 실행 --------------
+# 실행
 fallbacks = {
     "ko-KR":["en-US","ja-JP"], "en-US":["ko-KR","fr-FR"], "fr-FR":["en-US","it-IT"],
     "it-IT":["en-US","fr-FR"], "vi-VN":["en-US","ko-KR"], "ja-JP":["en-US","ko-KR"], "zh-CN":["en-US","ko-KR"],
