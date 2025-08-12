@@ -11,12 +11,13 @@ st.markdown("""
 div.stButton > button { display:block; margin:0 auto; }
 div.stButton > button#swap_btn { width:52px; height:52px; font-size:22px; border-radius:50%; padding:0; }
 
-/* 마이크 컨테이너 중앙 정렬 */
+/* 마이크 컨테이너 중앙 정렬 + 위아래 간격 추가 */
 .mic-container {
     display: block !important;
-    margin: 0 auto !important;
+    margin: 2rem auto !important;
     text-align: center !important;
     width: 100% !important;
+    padding: 1.5rem 0 !important;
 }
 
 /* 마이크 아이콘 자체 중앙 정렬 */
@@ -47,16 +48,22 @@ div:has(iframe[title^="audio_recorder_streamlit"]) {
 }
 
 .rec-caption { 
-    margin-top:-8px; 
-    text-align:center; 
-    font-size:0.85rem; 
-    color:#666; 
+    margin-top: 0.5rem;
+    margin-bottom: 1rem;
+    text-align: center; 
+    font-size: 0.85rem; 
+    color: #666; 
 }
 
 /* 전체 컨테이너 중앙 정렬 보강 */
 .main .block-container {
     padding-top: 2rem;
     max-width: 600px;
+}
+
+/* divider 위아래 간격 조정 */
+hr {
+    margin: 2rem 0 !important;
 }
 </style>
 """, unsafe_allow_html=True)
