@@ -29,7 +29,7 @@ def stt_recognize(wav_bytes: bytes, lang_code: str, alt_codes=None) -> str:
     client = gcp_speech()
     sr, ch = wav_info(wav_bytes)
     config = speech.RecognitionConfig(
-        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,  # audio_recorder_streamlit: PCM WAV
+        encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,  # PCM WAV
         sample_rate_hertz=sr,
         language_code=lang_code,
         alternative_language_codes=alt_codes or [],   # 간이 자동감지(보조언어)
@@ -104,13 +104,15 @@ def _swap_langs():
         st.session_state.tgt_name, st.session_state.src_name
     )
 
-# 모바일 폭 최적화: 스왑 버튼 좁게
+# 언어 선택 + 전환 (스왑 버튼 가운데 정렬)
 c1, cswap, c2 = st.columns([4, 0.8, 4])
-
 with c1:
     st.selectbox("입력 언어", LANGS, key="src_name")
 with cswap:
-    st.button("🔄", key="swap_btn", on_click=_swap_langs, use_container_width=False)
+    # 가운데 정렬: 서브컬럼 3개로 나눠 가운데에 버튼 배치
+    left, mid, right = st.columns([1, 1, 1])
+    with mid:
+        st.button("🔄", key="swap_btn", on_click=_swap_langs, use_container_width=False)
 with c2:
     st.selectbox("목표 언어", LANGS, key="tgt_name")
 
@@ -124,14 +126,20 @@ say_out_loud = st.toggle("번역 음성 출력", value=False)
 
 st.divider()
 
-# 마이크 녹음 (모바일 친화)
+# 마이크 녹음 (가운데 정렬 + 캡션 가운데/소형)
 from audio_recorder_streamlit import audio_recorder
-audio_bytes = audio_recorder(
-    text="눌러서 녹음 / 다시 눌러서 정지",
-    recording_color="#ff4b4b",
-    neutral_color="#2b2b2b",
-    icon_size="2x",
-)
+left, center, right = st.columns([1, 2, 1])
+with center:
+    audio_bytes = audio_recorder(
+        text="",  # 텍스트는 아래 캡션으로 별도 렌더링
+        recording_color="#ff4b4b",
+        neutral_color="#2b2b2b",
+        icon_size="2x",
+    )
+    st.markdown(
+        "<div style='text-align:center; font-size:0.85rem; color:#666;'>눌러서 녹음 / 다시 눌러서 정지</div>",
+        unsafe_allow_html=True
+    )
 
 # 간이 자동감지(보조언어) 기본 적용 — 주 언어별 보조언어 2~3개
 fallbacks = {
