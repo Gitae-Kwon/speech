@@ -8,49 +8,50 @@ from audio_recorder_streamlit import audio_recorder
 st.set_page_config(page_title="통역 MVP", page_icon="🗣️", layout="centered")
 st.markdown("""
 <style>
-/* 제목 */
-h3 { margin-top:.6rem; text-align:center; }
+div.stButton > button { display:block; margin:0 auto; }
+div.stButton > button#swap_btn { width:52px; height:52px; font-size:22px; border-radius:50%; padding:0; }
 
-/* ===== 공통 아이콘 박스(스왑/마이크 공용) ===== */
-.icon-box {
-  width: 58px; height: 58px;
-  border: 2px solid #4a4a4a;
-  border-radius: 14px;
-  background: rgba(255,255,255,0.05);
-  display: flex; align-items: center; justify-content: center;
-  margin: 0 auto;                   /* 중앙 정렬 */
-  transition: border-color .15s ease, background .15s ease;
-}
-.icon-box:hover { border-color: #ff7a7a; background: rgba(255,122,122,.08); }
-
-/* 스왑버튼: Streamlit 버튼을 아이콘처럼 보이게 */
-.icon-box .stButton>button {
-  all: unset;                       /* 기본 버튼 스타일 초기화 */
-  width: 100%; height: 100%;
-  display:flex; align-items:center; justify-content:center;
-  font-size: 22px; cursor: pointer;
+/* 마이크 아이콘 중앙 정렬 */
+iframe[title^="audio_recorder_streamlit"] { 
+    display:block !important; 
+    margin-left:auto !important; 
+    margin-right:auto !important;
+    text-align:center !important;
 }
 
-/* 마이크: 이모지(보이는 레이어) + iframe(실제 클릭/녹음) 을 겹치기 */
-.mic-holder { position: relative; }
-.mic-emoji  { position:absolute; inset:0;
-              display:flex; align-items:center; justify-content:center;
-              font-size: 22px; pointer-events: none; }   /* 클릭은 iframe이 받음 */
-.mic-holder iframe {
-  position:absolute; inset:0;
-  width:100% !important; height:100% !important;
-  opacity:0 !important;              /* 보이지 않게, 클릭만 받게 */
-  pointer-events:auto !important;
-  cursor: pointer;
+/* 마이크 컨테이너 전체 중앙 정렬 */
+div[data-testid="stVerticalBlock"] > div:has(iframe[title^="audio_recorder_streamlit"]) {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
 }
 
-/* 캡션 */
-.rec-caption { margin-top:6px; text-align:center; font-size:.85rem; color:#666; }
+/* 오디오 레코더 컴포넌트의 상위 div 중앙 정렬 */
+.stAudio, 
+div:has(> iframe[title^="audio_recorder_streamlit"]) {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: 100% !important;
+}
+
+.rec-caption { 
+    margin-top:-8px; 
+    text-align:center; 
+    font-size:0.85rem; 
+    color:#666; 
+}
+
+/* 전체 컨테이너 중앙 정렬 보강 */
+.main .block-container {
+    padding-top: 2rem;
+    max-width: 600px;
+}
 </style>
 """, unsafe_allow_html=True)
-st.markdown("<h3>🗣️ 통역 MVP</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align:center;'>🗣️ 통역 MVP</h3>", unsafe_allow_html=True)
 
-# ----------- 환경변수 방식 비활성 ------------
+# ----------- 강제로 기본 자격증명 비활성(환경변수 제거) ------------
 os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
 
 # -------------- secrets 검증 & 공용 로더 ----------------
@@ -61,8 +62,17 @@ def _load_sa_info():
         if not all(k in info and info[k] for k in required):
             raise ValueError("secrets에 필요한 필드가 없습니다.")
         return info
-    except Exception:
-        st.error("❌ `.streamlit/secrets.toml`의 [gcp_service_account] 설정을 확인하세요.")
+    except Exception as e:
+        st.error("❌ .streamlit/secrets.toml의 [gcp_service_account] 설정을 확인하세요.")
+        st.code("""예시:
+[gcp_service_account]
+type = "service_account"
+project_id = "your-project-id"
+private_key_id = "..."
+private_key = "-----BEGIN PRIVATE KEY-----\\n...\\n-----END PRIVATE KEY-----\\n"
+client_email = "svc@your-project-id.iam.gserviceaccount.com"
+token_uri = "https://oauth2.googleapis.com/token"
+""")
         st.stop()
 
 SA_INFO = _load_sa_info()
@@ -98,7 +108,7 @@ def stt_recognize(wav_bytes: bytes, lang_code: str, alt_codes=None) -> str:
         alternative_language_codes=alt_codes or [],
         enable_automatic_punctuation=True,
         audio_channel_count=ch,
-        model="latest_short",
+        model="latest_short",  # 짧은 발화 최적화
     )
     audio = speech.RecognitionAudio(content=wav_bytes)
     resp = client.recognize(config=cfg, audio=audio)
@@ -131,31 +141,22 @@ if "tgt_name" not in st.session_state: st.session_state.tgt_name = "영어"
 
 # -------------- 언어 선택 + 스왑(아이콘 중앙) --------------
 st.selectbox("입력 언어", LANGS, key="src_name")
-
 def _swap():
     st.session_state.src_name, st.session_state.tgt_name = st.session_state.tgt_name, st.session_state.src_name
-
-# 스왑 버튼(아이콘 박스)
-st.markdown('<div class="icon-box">', unsafe_allow_html=True)
 st.button("🔁", key="swap_btn", on_click=_swap)
-st.markdown('</div>', unsafe_allow_html=True)
-
 st.selectbox("목표 언어", LANGS, key="tgt_name")
 
 say_out_loud = st.toggle("번역 음성 출력", value=False)
 
 st.divider()
 
-# -------------- 마이크(아이콘 박스 동일 스타일) --------------
-# 보이는 레이어는 이모지(🎤), 클릭/녹음은 iframe이 받음
-st.markdown('<div class="icon-box mic-holder"><div class="mic-emoji">🎤</div>', unsafe_allow_html=True)
-audio_bytes = audio_recorder(
-    text="",
-    recording_color="#ff4b4b",
-    neutral_color="#2b2b2b",
-    icon_size="2x"
-)
-st.markdown('</div>', unsafe_allow_html=True)
+# -------------- 마이크(정중앙) + 캡션 간격 축소 --------------
+# 마이크 컨테이너를 중앙 정렬을 위한 컬럼 사용
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    audio_bytes = audio_recorder(text="", recording_color="#ff4b4b",
+                                 neutral_color="#2b2b2b", icon_size="2x")
+
 st.markdown("<div class='rec-caption'>눌러서 녹음 / 다시 눌러서 정지</div>", unsafe_allow_html=True)
 
 # -------------- 실행 --------------
@@ -175,10 +176,8 @@ if st.button("변환 실행", type="primary", use_container_width=True):
         try:
             src_text = stt_recognize(audio_bytes, src_lang, alt_codes)
             st.text_area("원문", src_text, height=120)
-
             tr_text = translate_text(src_text, tgt_iso) if src_text else ""
             st.text_area("번역", tr_text, height=140)
-
             if say_out_loud and tr_text:
                 try:
                     mp3 = tts_synthesize(tr_text, tgt_tts)
