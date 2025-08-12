@@ -8,30 +8,26 @@ from audio_recorder_streamlit import audio_recorder
 st.set_page_config(page_title="통역 MVP", page_icon="🗣️", layout="centered")
 st.markdown("""
 <style>
-/* (스왑 버튼 중앙은 기존 그대로 두면 됩니다) */
-
-/* 🎤 audio_recorder_streamlit 마이크: iframe 자체를 중앙 + 테두리 */
-iframe[title^="audio_recorder_streamlit"] {
-  display: block !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-
-  /* 아이콘보다 살짝 큰 프레임 크기(필요시 80~96px에서 조정) */
-  width: 88px !important;
-
-  /* 테두리 스타일 (스왑 버튼과 어울리게) */
-  border: 2px solid #4a4a4a !important;
-  border-radius: 12px !important;
-  background: rgba(255,255,255,0.05) !important;
-  box-sizing: content-box !important;  /* 테두리 계산이 내부 레이아웃에 영향 주지 않도록 */
+/* 🎤 버튼 */
+.mic-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 88px;
+  height: 88px;
+  font-size: 2rem;
+  cursor: pointer;
+  border: 2px solid #4a4a4a;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
+  margin: 0 auto; /* 중앙 정렬 */
 }
 
-/* 캡션은 그대로 */
-.rec-caption {
-  margin-top:-6px;
-  text-align:center;
-  font-size:0.85rem;
-  color:#999;
+.mic-caption {
+  margin-top: -6px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #999;
 }
 </style>
 """, unsafe_allow_html=True)
