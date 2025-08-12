@@ -17,8 +17,26 @@ iframe[title^="audio_recorder_streamlit"] {
     margin:0 auto !important;
 }
 
-/* 마이크를 포함하는 div도 버튼과 동일하게 중앙 정렬 */
-div:has(iframe[title^="audio_recorder_streamlit"]) {
+/* 마이크를 포함하는 모든 div 컨테이너들을 중앙 정렬 */
+div:has(iframe[title^="audio_recorder_streamlit"]),
+div:has(> iframe[title^="audio_recorder_streamlit"]),
+div:has(> div > iframe[title^="audio_recorder_streamlit"]),
+div:has(> div > div > iframe[title^="audio_recorder_streamlit"]) {
+    display:block !important;
+    margin:0 auto !important;
+    text-align: center !important;
+    width: 100% !important;
+}
+
+/* Streamlit 엘리먼트 컨테이너 중앙 정렬 */
+.element-container:has(iframe[title^="audio_recorder_streamlit"]) {
+    display:block !important;
+    margin:0 auto !important;
+    text-align: center !important;
+}
+
+/* 추가 보장 - 모든 audio recorder 관련 요소 중앙 정렬 */
+[data-testid="stVerticalBlock"] > div:has(iframe[title^="audio_recorder_streamlit"]) {
     display:block !important;
     margin:0 auto !important;
     text-align: center !important;
