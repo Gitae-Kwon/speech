@@ -32,7 +32,7 @@ def stt_recognize(wav_bytes: bytes, lang_code: str, alt_codes=None) -> str:
         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,  # audio_recorder_streamlit: PCM WAV
         sample_rate_hertz=sr,
         language_code=lang_code,
-        alternative_language_codes=alt_codes or [],   # 간이 자동감지
+        alternative_language_codes=alt_codes or [],   # 간이 자동감지(보조언어)
         enable_automatic_punctuation=True,
         audio_channel_count=ch,
         model="latest_short",                         # 짧은 발화 최적화
@@ -63,31 +63,61 @@ def tts_synthesize(text: str, bcp47_lang: str) -> bytes:
 st.set_page_config(page_title="통역 MVP", page_icon="🗣️", layout="centered")
 st.markdown("<h3 style='text-align:center;margin-top:0;'>🗣️ 통역 MVP</h3>", unsafe_allow_html=True)
 
-# 공통 표시 이름과 코드 매핑
-LANGS = ["한국어", "영어", "베트남어", "일본어", "중국어(간체)", "이탈리아어"]
-STT_BCP = { "한국어":"ko-KR","영어":"en-US","베트남어":"vi-VN","일본어":"ja-JP","중국어(간체)":"zh-CN","이탈리아어":"it-IT" }
-TRANS_ISO = {"한국어":"ko","영어":"en","베트남어":"vi","일본어":"ja","중국어(간체)":"zh","이탈리아어":"it"}
-TTS_BCP  = { "한국어":"ko-KR","영어":"en-US","베트남어":"vi-VN","일본어":"ja-JP","중국어(간체)":"zh-CN","이탈리아어":"it-IT" }
+# 공통 표시 이름과 코드 매핑 (요청 순서)
+LANGS = ["한국어", "영어", "프랑스어", "이탈리아어", "베트남어", "일본어", "중국어(간체)"]
 
-# 상태 초기값
-if "src_name" not in st.session_state:
-    st.session_state.src_name = "한국어"
-if "tgt_name" not in st.session_state:
-    st.session_state.tgt_name = "영어"
+STT_BCP = {   # STT용
+    "한국어":"ko-KR",
+    "영어":"en-US",
+    "프랑스어":"fr-FR",
+    "이탈리아어":"it-IT",
+    "베트남어":"vi-VN",
+    "일본어":"ja-JP",
+    "중국어(간체)":"zh-CN",
+}
+TRANS_ISO = { # 번역용
+    "한국어":"ko",
+    "영어":"en",
+    "프랑스어":"fr",
+    "이탈리아어":"it",
+    "베트남어":"vi",
+    "일본어":"ja",
+    "중국어(간체)":"zh",
+}
+TTS_BCP  = {  # TTS용
+    "한국어":"ko-KR",
+    "영어":"en-US",
+    "프랑스어":"fr-FR",
+    "이탈리아어":"it-IT",
+    "베트남어":"vi-VN",
+    "일본어":"ja-JP",
+    "중국어(간체)":"zh-CN",
+}
 
-# 입력/목표 + 전환
-col1, colswap, col2 = st.columns([4,1,4])
-with col1:
-    st.session_state.src_name = st.selectbox("입력 언어", LANGS, index=LANGS.index(st.session_state.src_name))
-with colswap:
-    if st.button("🔄", use_container_width=True):
-        st.session_state.src_name, st.session_state.tgt_name = st.session_state.tgt_name, st.session_state.src_name
-with col2:
-    st.session_state.tgt_name = st.selectbox("목표 언어", LANGS, index=LANGS.index(st.session_state.tgt_name))
+# 초기값 1회만 세팅
+if "src_name" not in st.session_state: st.session_state.src_name = "한국어"
+if "tgt_name" not in st.session_state: st.session_state.tgt_name = "영어"
 
-src_lang = STT_BCP[st.session_state.src_name]   # STT용
-tgt_iso  = TRANS_ISO[st.session_state.tgt_name] # 번역용
-tgt_tts  = TTS_BCP[st.session_state.tgt_name]   # TTS용
+# 🔁 스왑 콜백 (세션 상태 직접 교환)
+def _swap_langs():
+    st.session_state.src_name, st.session_state.tgt_name = (
+        st.session_state.tgt_name, st.session_state.src_name
+    )
+
+# 모바일 폭 최적화: 스왑 버튼 좁게
+c1, cswap, c2 = st.columns([4, 0.8, 4])
+
+with c1:
+    st.selectbox("입력 언어", LANGS, key="src_name")
+with cswap:
+    st.button("🔄", key="swap_btn", on_click=_swap_langs, use_container_width=False)
+with c2:
+    st.selectbox("목표 언어", LANGS, key="tgt_name")
+
+# 선택 결과 코드 계산
+src_lang = STT_BCP[st.session_state.src_name]   # "ko-KR" 등
+tgt_iso  = TRANS_ISO[st.session_state.tgt_name] # "ko","en","fr","it","vi","ja","zh"
+tgt_tts  = TTS_BCP[st.session_state.tgt_name]   # "ko-KR","en-US","fr-FR","it-IT","vi-VN","ja-JP","zh-CN"
 
 # 번역 음성 출력 ON/OFF
 say_out_loud = st.toggle("번역 음성 출력", value=False)
@@ -103,14 +133,15 @@ audio_bytes = audio_recorder(
     icon_size="2x",
 )
 
-# 간이 자동감지(보조언어) 기본 적용
+# 간이 자동감지(보조언어) 기본 적용 — 주 언어별 보조언어 2~3개
 fallbacks = {
-    "ko-KR": ["en-US", "vi-VN"],
-    "en-US": ["ko-KR", "vi-VN"],
-    "vi-VN": ["ko-KR", "en-US"],
-    "ja-JP": ["ko-KR", "en-US"],
+    "ko-KR": ["en-US", "ja-JP"],
+    "en-US": ["ko-KR", "fr-FR"],
+    "fr-FR": ["en-US", "it-IT"],
+    "it-IT": ["en-US", "fr-FR"],
+    "vi-VN": ["en-US", "ko-KR"],
+    "ja-JP": ["en-US", "ko-KR"],
     "zh-CN": ["en-US", "ko-KR"],
-    "it-IT": ["en-US", "ko-KR"],
 }
 alt_codes = fallbacks.get(src_lang, ["en-US", "ko-KR"])
 
