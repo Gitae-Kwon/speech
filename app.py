@@ -11,34 +11,38 @@ st.markdown("""
 div.stButton > button { display:block; margin:0 auto; }
 div.stButton > button#swap_btn { width:52px; height:52px; font-size:22px; border-radius:50%; padding:0; }
 
-/* 마이크 아이콘을 스왑 버튼과 동일한 스타일로 중앙 정렬 */
-iframe[title^="audio_recorder_streamlit"] { 
-    display:block !important; 
-    margin:0 auto !important;
-}
-
-/* 마이크를 포함하는 모든 div 컨테이너들을 중앙 정렬 */
-div:has(iframe[title^="audio_recorder_streamlit"]),
-div:has(> iframe[title^="audio_recorder_streamlit"]),
-div:has(> div > iframe[title^="audio_recorder_streamlit"]),
-div:has(> div > div > iframe[title^="audio_recorder_streamlit"]) {
-    display:block !important;
-    margin:0 auto !important;
+/* 마이크 컨테이너 중앙 정렬 */
+.mic-container {
+    display: block !important;
+    margin: 0 auto !important;
     text-align: center !important;
     width: 100% !important;
 }
 
-/* Streamlit 엘리먼트 컨테이너 중앙 정렬 */
-.element-container:has(iframe[title^="audio_recorder_streamlit"]) {
-    display:block !important;
-    margin:0 auto !important;
+/* 마이크 아이콘 자체 중앙 정렬 */
+.mic-container iframe[title^="audio_recorder_streamlit"],
+iframe[title^="audio_recorder_streamlit"] { 
+    display: block !important; 
+    margin: 0 auto !important;
     text-align: center !important;
+    position: relative !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
 }
 
-/* 추가 보장 - 모든 audio recorder 관련 요소 중앙 정렬 */
-[data-testid="stVerticalBlock"] > div:has(iframe[title^="audio_recorder_streamlit"]) {
-    display:block !important;
-    margin:0 auto !important;
+/* 마이크를 포함하는 모든 div 강제 중앙 정렬 */
+.mic-container > div,
+.mic-container > div > div,
+.mic-container > div > div > div,
+div:has(iframe[title^="audio_recorder_streamlit"]) {
+    display: block !important;
+    margin: 0 auto !important;
+    text-align: center !important;
+    width: 100% !important;
+}
+
+/* 전체 페이지 중앙 정렬 보장 */
+.element-container {
     text-align: center !important;
 }
 
@@ -158,9 +162,11 @@ say_out_loud = st.toggle("번역 음성 출력", value=False)
 st.divider()
 
 # -------------- 마이크(정중앙) + 캡션 간격 축소 --------------
-# 마이크를 스왑 버튼과 동일한 방식으로 중앙 정렬
+# 마이크를 스왑 버튼과 동일한 방식으로 중앙 정렬 - 컨테이너 방식 사용
+st.markdown('<div class="mic-container">', unsafe_allow_html=True)
 audio_bytes = audio_recorder(text="", recording_color="#ff4b4b",
                              neutral_color="#2b2b2b", icon_size="2x")
+st.markdown('</div>', unsafe_allow_html=True)
 
 st.markdown("<div class='rec-caption'>눌러서 녹음 / 다시 눌러서 정지</div>", unsafe_allow_html=True)
 
