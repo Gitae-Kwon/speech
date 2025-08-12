@@ -10,8 +10,17 @@ st.markdown("""
 <style>
 div.stButton > button { display:block; margin:0 auto; }
 div.stButton > button#swap_btn { width:52px; height:52px; font-size:22px; border-radius:50%; padding:0; }
-iframe[title^="audio_recorder_streamlit"] { display:block; margin-left:auto; margin-right:auto; }
-.rec-caption { margin-top:-8px; text-align:center; font-size:0.85rem; color:#666; }
+iframe[title^="audio_recorder_streamlit"] {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+.rec-caption {
+    margin-top:-8px;
+    text-align:center;
+    font-size:0.85rem;
+    color:#666;
+}
 </style>
 """, unsafe_allow_html=True)
 st.markdown("<h3 style='text-align:center;'>🗣️ 통역 MVP</h3>", unsafe_allow_html=True)
