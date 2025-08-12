@@ -4,7 +4,7 @@ import io, wave
 import streamlit as st
 from audio_recorder_streamlit import audio_recorder
 
-# ---------- GCP Clients ----------
+# ---------- GCP Clients (secrets 사용) ----------
 @st.cache_resource
 def gcp_speech():
     from google.cloud import speech
@@ -33,10 +33,10 @@ def stt_recognize(wav_bytes: bytes, lang_code: str, alt_codes=None) -> str:
         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
         sample_rate_hertz=sr,
         language_code=lang_code,
-        alternative_language_codes=alt_codes or [],
+        alternative_language_codes=alt_codes or [],   # 보조언어 자동감지(기본)
         enable_automatic_punctuation=True,
         audio_channel_count=ch,
-        model="latest_short",
+        model="latest_short",                         # 짧은 발화 최적화
     )
     audio = speech.RecognitionAudio(content=wav_bytes)
     resp = client.recognize(config=config, audio=audio)
@@ -62,51 +62,82 @@ def tts_synthesize(text: str, bcp47_lang: str) -> bytes:
 
 # ---------- UI ----------
 st.set_page_config(page_title="통역 MVP", page_icon="🗣️", layout="centered")
-st.markdown("<h3 style='text-align:center;'>🗣️ 통역 MVP</h3>", unsafe_allow_html=True)
+st.markdown("<h3 style='text-align:center;margin-top:0;'>🗣️ 통역 MVP</h3>", unsafe_allow_html=True)
 
+# 공통 표시 이름과 코드 매핑 (요청 순서)
 LANGS = ["한국어", "영어", "프랑스어", "이탈리아어", "베트남어", "일본어", "중국어(간체)"]
-STT_BCP = {"한국어":"ko-KR", "영어":"en-US", "프랑스어":"fr-FR", "이탈리아어":"it-IT", "베트남어":"vi-VN", "일본어":"ja-JP", "중국어(간체)":"zh-CN"}
-TRANS_ISO = {"한국어":"ko", "영어":"en", "프랑스어":"fr", "이탈리아어":"it", "베트남어":"vi", "일본어":"ja", "중국어(간체)":"zh"}
-TTS_BCP  = {"한국어":"ko-KR", "영어":"en-US", "프랑스어":"fr-FR", "이탈리아어":"it-IT", "베트남어":"vi-VN", "일본어":"ja-JP", "중국어(간체)":"zh-CN"}
+STT_BCP = {"한국어":"ko-KR","영어":"en-US","프랑스어":"fr-FR","이탈리아어":"it-IT","베트남어":"vi-VN","일본어":"ja-JP","중국어(간체)":"zh-CN"}
+TRANS_ISO = {"한국어":"ko","영어":"en","프랑스어":"fr","이탈리아어":"it","베트남어":"vi","일본어":"ja","중국어(간체)":"zh"}
+TTS_BCP  = {"한국어":"ko-KR","영어":"en-US","프랑스어":"fr-FR","이탈리아어":"it-IT","베트남어":"vi-VN","일본어":"ja-JP","중국어(간체)":"zh-CN"}
 
+# 초기값 1회만 세팅
 if "src_name" not in st.session_state: st.session_state.src_name = "한국어"
 if "tgt_name" not in st.session_state: st.session_state.tgt_name = "영어"
 
+# 🔁 스왑 콜백(진짜 동작)
 def _swap_langs():
     st.session_state.src_name, st.session_state.tgt_name = (
         st.session_state.tgt_name, st.session_state.src_name
     )
 
-# 입력 언어
+# ===== 상단 언어 선택 =====
 st.selectbox("입력 언어", LANGS, key="src_name")
 
-# 🔄 전환 버튼 — HTML로 중앙정렬
-st.markdown(
-    "<div style='text-align:center; margin: 0.5rem 0;'><button style='font-size:1.2rem;padding:0.3rem 0.8rem;cursor:pointer;' onclick='window.location.reload();'>🔄</button></div>",
-    unsafe_allow_html=True
-)
-# 버튼 클릭 동작 (Streamlit 방식)
-swap_clicked = st.button("언어 전환", key="swap_hidden", on_click=_swap_langs, help="언어 전환 버튼 (UI상 숨김)")
+# ===== 중앙 아이콘 스왑 버튼 (진짜 Streamlit 버튼 + CSS로 동그랗게) =====
+st.markdown("""
+<style>
+/* 스왑 아이콘 버튼을 동그랗고 작게 */
+div.swap-wrap { display:flex; justify-content:center; margin: 0.4rem 0 0.1rem 0; }
+button.swap-btn {
+  border: 1px solid rgba(100,100,100,0.35);
+  background: white;
+  border-radius: 999px;
+  width: 44px; height: 44px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+</style>
+<div class="swap-wrap">
+  </div>
+""", unsafe_allow_html=True)
 
-# 목표 언어
+# 실제 동작하는 버튼은 Streamlit 버튼을 가운데 컬럼에 배치
+lc, cc, rc = st.columns([1,1,1])
+with cc:
+    st.button("🔁", key="swap_btn", on_click=_swap_langs)
+
+# ===== 목표 언어 =====
 st.selectbox("목표 언어", LANGS, key="tgt_name")
 
-# TTS 여부
+# ===== TTS 여부 =====
 say_out_loud = st.toggle("번역 음성 출력", value=False)
 
 st.divider()
 
-# 🎙️ 마이크 — HTML로 중앙정렬 + 캡션 간격 최소화
-st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
-audio_bytes = audio_recorder(
-    text="", recording_color="#ff4b4b", neutral_color="#2b2b2b", icon_size="2x"
-)
-st.markdown("<div style='margin-top:-6px; font-size:0.85rem; color:#666;'>눌러서 녹음 / 다시 눌러서 정지</div>", unsafe_allow_html=True)
-st.markdown("</div>", unsafe_allow_html=True)
+# ===== 마이크: 가운데 정렬 + 캡션 간격 줄이기 =====
+st.markdown("""
+<style>
+/* 마이크 영역 중앙정렬 + 캡션 간격 */
+div.mic-wrap { display:flex; flex-direction:column; align-items:center; }
+div.mic-caption { margin-top: -8px; font-size: 0.85rem; color:#666; text-align:center; }
+</style>
+""", unsafe_allow_html=True)
 
+st.markdown('<div class="mic-wrap">', unsafe_allow_html=True)
+audio_bytes = audio_recorder(text="", recording_color="#ff4b4b", neutral_color="#2b2b2b", icon_size="2x")
+st.markdown('<div class="mic-caption">눌러서 녹음 / 다시 눌러서 정지</div>', unsafe_allow_html=True)
+st.markdown('</div>', unsafe_allow_html=True)
+
+# ===== 인식/번역/음성 =====
 fallbacks = {
-    "ko-KR": ["en-US", "ja-JP"], "en-US": ["ko-KR", "fr-FR"], "fr-FR": ["en-US", "it-IT"],
-    "it-IT": ["en-US", "fr-FR"], "vi-VN": ["en-US", "ko-KR"], "ja-JP": ["en-US", "ko-KR"], "zh-CN": ["en-US", "ko-KR"],
+    "ko-KR": ["en-US", "ja-JP"],
+    "en-US": ["ko-KR", "fr-FR"],
+    "fr-FR": ["en-US", "it-IT"],
+    "it-IT": ["en-US", "fr-FR"],
+    "vi-VN": ["en-US", "ko-KR"],
+    "ja-JP": ["en-US", "ko-KR"],
+    "zh-CN": ["en-US", "ko-KR"],
 }
 src_lang = STT_BCP[st.session_state.src_name]
 tgt_iso  = TRANS_ISO[st.session_state.tgt_name]
