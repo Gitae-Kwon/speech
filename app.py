@@ -11,42 +11,17 @@ st.markdown("""
 div.stButton > button { display:block; margin:0 auto; }
 div.stButton > button#swap_btn { width:52px; height:52px; font-size:22px; border-radius:50%; padding:0; }
 
-/* 마이크 아이콘 강제 중앙 정렬 */
+/* 마이크 아이콘을 스왑 버튼과 동일한 스타일로 중앙 정렬 */
 iframe[title^="audio_recorder_streamlit"] { 
     display:block !important; 
     margin:0 auto !important;
-    position: relative !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
 }
 
-/* 마이크를 포함하는 모든 상위 div 중앙 정렬 */
-div[data-testid="column"] > div > div,
-div[data-testid="stVerticalBlock"] > div,
-.element-container {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
+/* 마이크를 포함하는 div도 버튼과 동일하게 중앙 정렬 */
+div:has(iframe[title^="audio_recorder_streamlit"]) {
+    display:block !important;
+    margin:0 auto !important;
     text-align: center !important;
-}
-
-/* 마이크 컨테이너의 직접적인 부모 요소들 */
-div:has(iframe[title^="audio_recorder_streamlit"]),
-div:has(> div > iframe[title^="audio_recorder_streamlit"]),
-div:has(> div > div > iframe[title^="audio_recorder_streamlit"]) {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    width: 100% !important;
-    text-align: center !important;
-}
-
-/* Streamlit 컬럼 내부의 중앙 정렬 */
-[data-testid="column"] {
-    display: flex !important;
-    justify-content: center !important;
-    align-items: center !important;
-    flex-direction: column !important;
 }
 
 .rec-caption { 
@@ -60,11 +35,6 @@ div:has(> div > div > iframe[title^="audio_recorder_streamlit"]) {
 .main .block-container {
     padding-top: 2rem;
     max-width: 600px;
-}
-
-/* 추가적인 중앙 정렬 보장 */
-.stApp > div > div > div > div {
-    text-align: center;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -170,11 +140,9 @@ say_out_loud = st.toggle("번역 음성 출력", value=False)
 st.divider()
 
 # -------------- 마이크(정중앙) + 캡션 간격 축소 --------------
-# 마이크 컨테이너를 중앙 정렬을 위한 컬럼 사용
-col1, col2, col3 = st.columns([1, 2, 1])
-with col2:
-    audio_bytes = audio_recorder(text="", recording_color="#ff4b4b",
-                                 neutral_color="#2b2b2b", icon_size="2x")
+# 마이크를 스왑 버튼과 동일한 방식으로 중앙 정렬
+audio_bytes = audio_recorder(text="", recording_color="#ff4b4b",
+                             neutral_color="#2b2b2b", icon_size="2x")
 
 st.markdown("<div class='rec-caption'>눌러서 녹음 / 다시 눌러서 정지</div>", unsafe_allow_html=True)
 
