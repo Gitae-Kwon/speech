@@ -8,26 +8,28 @@ from audio_recorder_streamlit import audio_recorder
 st.set_page_config(page_title="통역 MVP", page_icon="🗣️", layout="centered")
 st.markdown("""
 <style>
-/* 🔁 스왑버튼은 그대로 중앙 */
+/* 스왑 버튼은 유지 */
 div.stButton > button { display:block; margin:0 auto; }
 
-/* 🎤 audio_recorder_streamlit 마이크 아이콘(iframe) 중앙 고정 + 폭 좁게 */
+/* 🎤 마이크 iframe을 좌표 기준으로 정확히 가운데 고정 */
 iframe[title="audio_recorder_streamlit.audio_recorder"],
 iframe[title*="audio_recorder_streamlit"],
 iframe[title*="audio"] {
+  position: relative !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
   display: block !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  width: 84px !important;     /* 아이콘 근처 폭으로 제한해서 '정중앙'처럼 보이게 */
-  max-width: 84px !important;
+  margin: 0 !important;            /* 주변 margin 영향 제거 */
+  width: auto !important;           /* 고정 폭 제거 (정가운데 감) */
+  max-width: none !important;
 }
 
-/* 마이크 캡션(간격/가운데) */
-.rec-caption { 
-  margin-top: -8px;
-  text-align:center; 
-  font-size: 0.85rem; 
-  color:#666; 
+/* 마이크 캡션 */
+.rec-caption {
+  margin-top:-8px;
+  text-align:center;
+  font-size:0.85rem;
+  color:#666;
 }
 </style>
 """, unsafe_allow_html=True)
