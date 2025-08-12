@@ -9,33 +9,22 @@ st.markdown("""
 <style>
 div.stButton > button#swap_btn { width:52px; height:52px; font-size:22px; border-radius:50%; padding:0; }
 
-/* 변환 실행 버튼 스타일 복사 (마이크 버튼 동일) */
-.stButton > button.primary-btn {
-    background-color: rgb(19, 23, 32);
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    font-weight: 600;
-    border-radius: 0.25rem;
-    cursor: pointer;
-    width: 100%;
-}
-.stButton > button.primary-btn:hover {
-    background-color: rgb(32, 37, 48);
+/* 마이크 버튼을 중앙 정렬 */
+.mic-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+    margin-bottom: 0.3rem;
 }
 
-/* audio_recorder 숨기기 */
-iframe[title^="audio_recorder_streamlit"] {
-    display:none !important;
-}
-
+/* 녹음 캡션 스타일 */
 .rec-caption { 
-    margin-top:-8px; 
     text-align:center; 
     font-size:0.85rem; 
     color:#666; 
 }
 
+/* 전체 폭 제한 */
 .main .block-container {
     padding-top: 2rem;
     max-width: 600px;
@@ -48,7 +37,7 @@ st.markdown("<h3 style='text-align:center;'>🗣️ 통역 MVP</h3>", unsafe_all
 # ----------- 환경변수 제거 ------------
 os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
 
-# -------------- secrets 검증 & 공용 로더 ----------------
+# -------------- secrets 로딩 ----------------
 def _load_sa_info():
     try:
         info = dict(st.secrets["gcp_service_account"])
@@ -135,20 +124,11 @@ say_out_loud = st.toggle("번역 음성 출력", value=False)
 
 st.divider()
 
-# 마이크 버튼 (변환 실행과 동일 스타일)
-if st.button("마이크", key="mic_btn", type="primary", use_container_width=True):
-    # JS로 숨겨진 audio_recorder 클릭
-    st.markdown("""
-        <script>
-        const iframe = parent.document.querySelector('iframe[title^="audio_recorder_streamlit"]');
-        if (iframe) { iframe.contentWindow.document.querySelector('button')?.click(); }
-        </script>
-    """, unsafe_allow_html=True)
-
-# 실제 audio_recorder (숨김 상태)
-audio_bytes = audio_recorder(text="", recording_color="#ff4b4b",
-                             neutral_color="#2b2b2b", icon_size="2x")
-
+# 🎤 마이크 아이콘 버튼 (중앙)
+st.markdown('<div class="mic-container">', unsafe_allow_html=True)
+audio_bytes = audio_recorder(text="", icon_name="microphone", recording_color="#ff4b4b",
+                             neutral_color="#2b2b2b", icon_size="3x")
+st.markdown('</div>', unsafe_allow_html=True)
 st.markdown("<div class='rec-caption'>눌러서 녹음 / 다시 눌러서 정지</div>", unsafe_allow_html=True)
 
 # 실행
