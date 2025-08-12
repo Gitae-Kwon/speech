@@ -11,28 +11,42 @@ st.markdown("""
 div.stButton > button { display:block; margin:0 auto; }
 div.stButton > button#swap_btn { width:52px; height:52px; font-size:22px; border-radius:50%; padding:0; }
 
-/* 마이크 아이콘 중앙 정렬 */
+/* 마이크 아이콘 강제 중앙 정렬 */
 iframe[title^="audio_recorder_streamlit"] { 
     display:block !important; 
-    margin-left:auto !important; 
-    margin-right:auto !important;
-    text-align:center !important;
+    margin:0 auto !important;
+    position: relative !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
 }
 
-/* 마이크 컨테이너 전체 중앙 정렬 */
-div[data-testid="stVerticalBlock"] > div:has(iframe[title^="audio_recorder_streamlit"]) {
+/* 마이크를 포함하는 모든 상위 div 중앙 정렬 */
+div[data-testid="column"] > div > div,
+div[data-testid="stVerticalBlock"] > div,
+.element-container {
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
+    text-align: center !important;
 }
 
-/* 오디오 레코더 컴포넌트의 상위 div 중앙 정렬 */
-.stAudio, 
-div:has(> iframe[title^="audio_recorder_streamlit"]) {
+/* 마이크 컨테이너의 직접적인 부모 요소들 */
+div:has(iframe[title^="audio_recorder_streamlit"]),
+div:has(> div > iframe[title^="audio_recorder_streamlit"]),
+div:has(> div > div > iframe[title^="audio_recorder_streamlit"]) {
     display: flex !important;
     justify-content: center !important;
     align-items: center !important;
     width: 100% !important;
+    text-align: center !important;
+}
+
+/* Streamlit 컬럼 내부의 중앙 정렬 */
+[data-testid="column"] {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+    flex-direction: column !important;
 }
 
 .rec-caption { 
@@ -46,6 +60,11 @@ div:has(> iframe[title^="audio_recorder_streamlit"]) {
 .main .block-container {
     padding-top: 2rem;
     max-width: 600px;
+}
+
+/* 추가적인 중앙 정렬 보장 */
+.stApp > div > div > div > div {
+    text-align: center;
 }
 </style>
 """, unsafe_allow_html=True)
