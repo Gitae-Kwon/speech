@@ -8,29 +8,38 @@ from audio_recorder_streamlit import audio_recorder
 st.set_page_config(page_title="통역 MVP", page_icon="🗣️", layout="centered")
 st.markdown("""
 <style>
-/* 마이크 버튼 중앙 정렬 */
-iframe[title="audio_recorder_streamlit.audio_recorder"],
-iframe[title*="audio_recorder_streamlit"],
-iframe[title*="audio"] {
-  display: block !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
+/* 공통: 버튼/컴포넌트가 왼쪽으로 끌리는 현상 방지 */
+.center-row { display:flex; justify-content:center; align-items:center; }
+
+/* 🔁 스왑 버튼: 가운데 + 둥근 아이콘 버튼 */
+.center-row .swap-btn > button {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  font-size: 22px;
+  padding: 0;
 }
 
-/* 마이크 테두리 (스왑 버튼 스타일과 맞춤) */
-iframe[title="audio_recorder_streamlit.audio_recorder"] {
-  border: 2px solid #4a4a4a !important;
-  border-radius: 12px !important;
-  padding: 6px !important;
-  background-color: rgba(255,255,255,0.05) !important;
+/* 🎤 마이크: 래퍼(div)에 테두리 주고, 내용(iframe)을 중앙에 */
+.mic-wrap {
+  display: inline-block;             /* 내용 크기만큼만 래퍼가 줄어듦 → 테두리가 딱 맞음 */
+  padding: 6px;                      /* 아이콘보다 살짝 크게 보이게 */
+  border: 2px solid #4a4a4a;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.05);
 }
 
-/* 마이크 설명 텍스트 */
+/* iframe을 래퍼 안에서 중앙 정렬 */
+.mic-wrap iframe {
+  display:block;
+  margin: 0 auto;
+}
+
+/* 마이크 캡션 */
 .rec-caption {
-  margin-top: -6px;
-  text-align: center;
-  font-size: 0.85rem;
-  color: #999;
+  margin-top:-6px;
+  text-align:center;
+  font-size:0.85rem;
+  color:#999;
 }
 </style>
 """, unsafe_allow_html=True)
