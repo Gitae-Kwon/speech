@@ -1,5 +1,5 @@
-streamlit==1.38.0
-audio-recorder-streamlit==0.0.8
-google-cloud-speech==2.26.0
-google-cloud-translate==3.15.5
-google-cloud-texttospeech==2.16.5
+streamlit
+pytrends
+pandas
+requests
+python-dateutil
